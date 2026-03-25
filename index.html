@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mis Cuentas</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #fff;
+        }
+
+        /* ── CONFIG BANNER ── */
+        #config-banner {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            background: linear-gradient(90deg, #f59e0b, #d97706);
+            color: #000;
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 8px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            z-index: 100;
+        }
+        #config-banner input {
+            flex: 1;
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: none;
+            font-size: 0.78rem;
+            background: rgba(0,0,0,0.15);
+            color: #000;
+        }
+        #config-banner input::placeholder { color: rgba(0,0,0,0.45); }
+        #config-banner button {
+            padding: 4px 12px;
+            border-radius: 6px;
+            border: none;
+            background: #000;
+            color: #f59e0b;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        #config-banner.hidden { display: none; }
+
+        /* ── SYNC STATUS ── */
+        #sync-status {
+            position: fixed;
+            bottom: 12px; right: 16px;
+            font-size: 0.72rem;
+            padding: 5px 12px;
+            border-radius: 20px;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(6px);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            z-index: 50;
+            transition: opacity 0.4s;
+        }
+        #sync-status .dot {
+            width: 7px; height: 7px;
+            border-radius: 50%;
+            background: #4ade80;
+        }
+        #sync-status.syncing .dot { background: #f59e0b; animation: pulse 0.8s infinite; }
+        #sync-status.error .dot { background: #f87171; }
+        #sync-status.offline .dot { background: #888; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+        /* ── APP LAYOUT ── */
+        .app {
+            display: grid;
+            grid-template-columns: 340px 1fr;
+            height: 100vh;
+            overflow: hidden;
+            padding-top: 0;
+            transition: padding-top 0.2s;
+        }
+        .app.with-banner { padding-top: 38px; }
+
+        /* ── PANEL IZQUIERDO ── */
+        .panel-left {
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid rgba(255,255,255,0.08);
+            overflow: hidden;
+        }
+
+        .panel-left-header { padding: 16px 20px 12px; flex-shrink: 0; }
+
+        h1 { font-size: 1.4rem; font-weight: 700; text-align: center; margin-bottom: 12px; }
+
+        .calendar-row {
+            display: flex; align-items: center; gap: 8px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 10px; padding: 8px 12px;
+        }
+        .calendar-row label { font-size: 0.8rem; opacity: 0.7; white-space: nowrap; }
+        .calendar-row input[type="date"] {
+            flex: 1; padding: 5px 8px;
+            border: 1px solid rgba(102,126,234,0.4); border-radius: 8px;
+            background: rgba(255,255,255,0.08); color: #fff; font-size: 0.85rem; cursor: pointer;
+        }
+        .calendar-row input[type="date"]:focus { outline: none; border-color: #667eea; }
+        .calendar-row input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; }
+
+        .btn-today {
+            padding: 5px 10px; border: none; border-radius: 8px; cursor: pointer;
+            font-size: 0.75rem; font-weight: 600;
+            background: linear-gradient(135deg, #667eea, #764ba2); color: #fff;
+            white-space: nowrap; transition: opacity 0.2s;
+        }
+        .btn-today:hover { opacity: 0.85; }
+
+        .balance-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px; padding: 14px 16px; text-align: center; margin-top: 10px;
+        }
+        .balance-card h2 { font-size: 0.75rem; opacity: 0.85; margin-bottom: 4px; }
+        .balance-amount { font-size: 2rem; font-weight: bold; line-height: 1; }
+        .balance-amount.positive { color: #4ade80; }
+        .balance-amount.negative { color: #f87171; }
+
+        .stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+        .stat-card { background: rgba(255,255,255,0.08); border-radius: 10px; padding: 10px 12px; text-align: center; }
+        .stat-card.income { border-left: 3px solid #4ade80; }
+        .stat-card.expense { border-left: 3px solid #f87171; }
+        .stat-card h3 { font-size: 0.7rem; opacity: 0.75; margin-bottom: 4px; }
+        .stat-card .amount { font-size: 1.1rem; font-weight: bold; }
+        .stat-card.income .amount { color: #4ade80; }
+        .stat-card.expense .amount { color: #f87171; }
+
+        .add-section {
+            padding: 10px 20px; flex-shrink: 0;
+            border-top: 1px solid rgba(255,255,255,0.06);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .add-section h2 { font-size: 0.85rem; opacity: 0.7; margin-bottom: 8px; }
+        .form-inputs { display: flex; gap: 6px; }
+        input[type="text"], input[type="number"] {
+            padding: 8px 10px; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;
+            background: rgba(255,255,255,0.08); color: #fff; font-size: 0.85rem; width: 100%;
+        }
+        input::placeholder { color: rgba(255,255,255,0.4); }
+        input:focus { outline: 1px solid #667eea; background: rgba(255,255,255,0.12); }
+        .form-buttons { display: flex; gap: 6px; margin-top: 6px; }
+        .btn-income, .btn-expense {
+            flex: 1; padding: 8px; border: none; border-radius: 8px;
+            cursor: pointer; font-size: 0.8rem; font-weight: 600; transition: opacity 0.2s;
+        }
+        .btn-income { background: linear-gradient(135deg, #4ade80, #22c55e); color: #000; }
+        .btn-expense { background: linear-gradient(135deg, #f87171, #ef4444); color: #fff; }
+        .btn-income:hover, .btn-expense:hover { opacity: 0.85; }
+        .btn-income:disabled, .btn-expense:disabled { opacity: 0.45; cursor: not-allowed; }
+
+        .history-section {
+            flex: 1; display: flex; flex-direction: column;
+            overflow: hidden; padding: 10px 20px 14px;
+        }
+        .history-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 8px; flex-shrink: 0;
+        }
+        .history-header h2 { font-size: 0.85rem; opacity: 0.7; }
+        .tab-buttons { display: flex; gap: 4px; }
+        .tab-btn {
+            padding: 4px 10px; font-size: 0.72rem; font-weight: 600;
+            border: none; border-radius: 20px; cursor: pointer;
+            background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.7); transition: all 0.2s;
+        }
+        .tab-btn.active { background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; }
+
+        .history-list { flex: 1; overflow-y: auto; padding-right: 4px; }
+        .history-list::-webkit-scrollbar { width: 4px; }
+        .history-list::-webkit-scrollbar-track { background: transparent; }
+        .history-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+
+        .history-item {
+            display: flex; align-items: center;
+            padding: 9px 10px; background: rgba(255,255,255,0.04);
+            border-radius: 8px; margin-bottom: 5px; transition: background 0.2s;
+        }
+        .history-item:hover { background: rgba(255,255,255,0.09); }
+        .history-item.income { border-left: 2px solid #4ade80; }
+        .history-item.expense { border-left: 2px solid #f87171; }
+        .history-item.pending { opacity: 0.55; }
+
+        .history-info { flex: 1; min-width: 0; }
+        .history-description { font-size: 0.82rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .history-date { font-size: 0.68rem; opacity: 0.5; margin-top: 1px; }
+        .history-amount { font-weight: bold; font-size: 0.85rem; margin: 0 8px; white-space: nowrap; }
+        .history-amount.positive { color: #4ade80; }
+        .history-amount.negative { color: #f87171; }
+        .btn-delete {
+            background: rgba(239,68,68,0.15); color: #f87171;
+            padding: 4px 7px; font-size: 0.72rem; border: none; border-radius: 6px;
+            cursor: pointer; flex-shrink: 0; transition: background 0.2s;
+        }
+        .btn-delete:hover { background: rgba(239,68,68,0.3); }
+        .btn-delete:disabled { opacity: 0.3; cursor: not-allowed; }
+        .empty-state { text-align: center; padding: 30px 0; opacity: 0.45; font-size: 0.85rem; }
+
+        /* ── PANEL DERECHO ── */
+        .panel-right {
+            display: flex; flex-direction: column;
+            padding: 16px; gap: 12px; overflow: hidden; min-height: 0;
+        }
+        .panel-right-title { font-size: 0.7rem; opacity: 0.45; text-transform: uppercase; letter-spacing: 0.08em; flex-shrink: 0; }
+        .charts-top { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; flex: 1; min-height: 0; }
+        .chart-history-wrap {
+            flex: 1; display: flex; flex-direction: column;
+            min-height: 0; background: rgba(255,255,255,0.04);
+            border-radius: 12px; padding: 12px 14px;
+        }
+        .chart-box {
+            background: rgba(255,255,255,0.04); border-radius: 12px;
+            padding: 12px 14px; display: flex; flex-direction: column; min-height: 0;
+        }
+        .chart-box h3, .chart-history-wrap h3 { font-size: 0.75rem; opacity: 0.65; margin-bottom: 8px; flex-shrink: 0; }
+        .chart-canvas-wrap { flex: 1; position: relative; min-height: 0; }
+        .chart-canvas-wrap canvas { position: absolute; top:0; left:0; width:100%!important; height:100%!important; }
+        .chart-controls { display: flex; gap: 5px; margin-bottom: 8px; flex-shrink: 0; flex-wrap: wrap; }
+        .range-btn {
+            padding: 3px 10px; font-size: 0.7rem;
+            background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.7);
+            border: none; border-radius: 20px; cursor: pointer; transition: all 0.2s;
+        }
+        .range-btn.active { background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; }
+    </style>
+</head>
+<body>
+
+<!-- ── CONFIG BANNER ── -->
+<div id="config-banner">
+    ⚙️ Pega la URL de tu Web App de Google Apps Script:
+    <input type="text" id="script-url-input" placeholder="https://script.google.com/macros/s/XXXXXX/exec">
+    <button onclick="saveScriptUrl()">Guardar</button>
+</div>
+
+<!-- ── SYNC STATUS ── -->
+<div id="sync-status" class="offline">
+    <div class="dot"></div>
+    <span id="sync-text">Sin configurar</span>
+</div>
+
+<!-- ── APP ── -->
+<div class="app with-banner" id="app">
+
+    <div class="panel-left">
+        <div class="panel-left-header">
+            <h1>💰 Mis Cuentas</h1>
+            <div class="calendar-row">
+                <label>📅</label>
+                <input type="date" id="date-picker" onchange="onDateChange()">
+                <button class="btn-today" onclick="goToToday()">Hoy</button>
+            </div>
+            <div class="balance-card">
+                <h2>Balance acumulado</h2>
+                <div class="balance-amount" id="balance">0.00 €</div>
+            </div>
+            <div class="stats-row">
+                <div class="stat-card income">
+                    <h3>Ingresos del día</h3>
+                    <div class="amount" id="total-income">0.00 €</div>
+                </div>
+                <div class="stat-card expense">
+                    <h3>Gastos del día</h3>
+                    <div class="amount" id="total-expenses">0.00 €</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="add-section">
+            <h2>➕ Añadir movimiento</h2>
+            <div class="form-inputs">
+                <input type="text" id="description" placeholder="Descripción...">
+                <input type="number" id="amount" placeholder="€" step="0.01" min="0" style="width:90px;flex-shrink:0;">
+            </div>
+            <div class="form-buttons">
+                <button class="btn-income" id="btn-income" onclick="addTransaction('income')">+ Ingreso</button>
+                <button class="btn-expense" id="btn-expense" onclick="addTransaction('expense')">− Gasto</button>
+            </div>
+        </div>
+
+        <div class="history-section">
+            <div class="history-header">
+                <h2>📋 Historial</h2>
+                <div class="tab-buttons">
+                    <button class="tab-btn active" onclick="filterHistory('all', event)">Todos</button>
+                    <button class="tab-btn" onclick="filterHistory('income', event)">Ingresos</button>
+                    <button class="tab-btn" onclick="filterHistory('expense', event)">Gastos</button>
+                </div>
+            </div>
+            <div class="history-list" id="history-list">
+                <div class="empty-state">Cargando...</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel-right">
+        <div class="panel-right-title">Gráficas</div>
+        <div class="charts-top">
+            <div class="chart-box">
+                <h3>📊 Movimientos del día</h3>
+                <div class="chart-canvas-wrap"><canvas id="day-chart"></canvas></div>
+            </div>
+            <div class="chart-box">
+                <h3>🍩 Distribución</h3>
+                <div class="chart-canvas-wrap"><canvas id="donut-chart"></canvas></div>
+            </div>
+        </div>
+        <div class="chart-history-wrap">
+            <h3>📈 Histórico de balance acumulado</h3>
+            <div class="chart-controls">
+                <button class="range-btn active" onclick="setRange(7,this)">7 días</button>
+                <button class="range-btn" onclick="setRange(30,this)">30 días</button>
+                <button class="range-btn" onclick="setRange(90,this)">3 meses</button>
+                <button class="range-btn" onclick="setRange(365,this)">1 año</button>
+                <button class="range-btn" onclick="setRange(0,this)">Todo</button>
+            </div>
+            <div class="chart-canvas-wrap"><canvas id="history-chart"></canvas></div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+//  CONFIGURACIÓN
+// ══════════════════════════════════════════════════════
+let SCRIPT_URL = localStorage.getItem('scriptUrl') || '';
+
+function saveScriptUrl() {
+    const val = document.getElementById('script-url-input').value.trim();
+    if (!val.startsWith('https://script.google.com')) {
+        alert('La URL no parece válida. Debe empezar por https://script.google.com');
+        return;
+    }
+    SCRIPT_URL = val;
+    localStorage.setItem('scriptUrl', SCRIPT_URL);
+    document.getElementById('config-banner').classList.add('hidden');
+    document.getElementById('app').classList.remove('with-banner');
+    loadFromSheets();
+}
+
+function initConfigBanner() {
+    if (SCRIPT_URL) {
+        document.getElementById('config-banner').classList.add('hidden');
+        document.getElementById('app').classList.remove('with-banner');
+        document.getElementById('script-url-input').value = SCRIPT_URL;
+    }
+}
+
+// ══════════════════════════════════════════════════════
+//  SYNC STATUS
+// ══════════════════════════════════════════════════════
+function setStatus(state, text) {
+    const el = document.getElementById('sync-status');
+    const txt = document.getElementById('sync-text');
+    el.className = state;
+    txt.textContent = text;
+}
+
+// ══════════════════════════════════════════════════════
+//  API GOOGLE SHEETS
+// ══════════════════════════════════════════════════════
+async function apiCall(params) {
+    if (!SCRIPT_URL) throw new Error('Sin URL configurada');
+    const url = SCRIPT_URL + '?' + new URLSearchParams(params).toString();
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    return data;
+}
+
+async function loadFromSheets() {
+    setStatus('syncing', 'Cargando...');
+    try {
+        const data = await apiCall({ action: 'getAll' });
+        transactions = data.transactions || [];
+        setStatus('', 'Sincronizado ✓');
+        updateUI();
+    } catch (err) {
+        setStatus('error', 'Error al cargar: ' + err.message);
+        // Fallback a localStorage
+        transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
+        updateUI();
+    }
+}
+
+async function pushAdd(transaction) {
+    setStatus('syncing', 'Guardando...');
+    try {
+        await apiCall({
+            action:      'add',
+            id:          transaction.id,
+            description: transaction.description,
+            amount:      transaction.amount,
+            type:        transaction.type,
+            date:        transaction.date
+        });
+        setStatus('', 'Guardado ✓');
+    } catch (err) {
+        setStatus('error', 'Error al guardar: ' + err.message);
+    }
+}
+
+async function pushDelete(id) {
+    setStatus('syncing', 'Eliminando...');
+    try {
+        await apiCall({ action: 'delete', id });
+        setStatus('', 'Eliminado ✓');
+    } catch (err) {
+        setStatus('error', 'Error al eliminar: ' + err.message);
+    }
+}
+
+// ══════════════════════════════════════════════════════
+//  ESTADO LOCAL
+// ══════════════════════════════════════════════════════
+let transactions = [];
+let currentFilter = 'all';
+let historyRange = 7;
+let dayChart, donutChart, historyChart;
+
+const datePicker = document.getElementById('date-picker');
+
+function todayStr() { return new Date().toISOString().split('T')[0]; }
+function goToToday() { datePicker.value = todayStr(); onDateChange(); }
+function onDateChange() { updateUI(); }
+function selectedDate() { return datePicker.value || todayStr(); }
+
+function saveLocal() {
+    localStorage.setItem('transactions', JSON.stringify(transactions));
+}
+
+// ══════════════════════════════════════════════════════
+//  ACCIONES
+// ══════════════════════════════════════════════════════
+async function addTransaction(type) {
+    const descInput   = document.getElementById('description');
+    const amountInput = document.getElementById('amount');
+    const description = descInput.value.trim();
+    const amount      = parseFloat(amountInput.value);
+    if (!description || isNaN(amount) || amount <= 0) { alert('Introduce una descripción y cantidad válida'); return; }
+
+    // Deshabilitar botones mientras se guarda
+    document.getElementById('btn-income').disabled = true;
+    document.getElementById('btn-expense').disabled = true;
+
+    const now = new Date();
+    const iso = `${selectedDate()}T${now.toTimeString().slice(0,8)}`;
+    const transaction = { id: Date.now(), description, amount, type, date: new Date(iso).toISOString() };
+
+    // Añadir localmente de inmediato (optimistic UI)
+    transactions.unshift(transaction);
+    saveLocal();
+    updateUI();
+    descInput.value = ''; amountInput.value = '';
+
+    // Sincronizar con Sheets
+    await pushAdd(transaction);
+
+    document.getElementById('btn-income').disabled = false;
+    document.getElementById('btn-expense').disabled = false;
+}
+
+async function deleteTransaction(id) {
+    // Marcar como "pending" en la UI
+    const item = document.querySelector(`[data-id="${id}"]`);
+    if (item) { item.classList.add('pending'); item.querySelector('.btn-delete').disabled = true; }
+
+    // Eliminar localmente
+    transactions = transactions.filter(t => t.id != id);
+    saveLocal();
+    updateUI();
+
+    // Sincronizar con Sheets
+    await pushDelete(id);
+}
+
+// ══════════════════════════════════════════════════════
+//  UI
+// ══════════════════════════════════════════════════════
+function formatCurrency(n) { return n.toFixed(2) + ' €'; }
+function formatDate(iso) {
+    return new Date(iso).toLocaleDateString('es-ES', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
+}
+
+function updateUI() {
+    const sel = selectedDate();
+    const dayTxs     = transactions.filter(t => t.date.startsWith(sel));
+    const dayIncome  = dayTxs.filter(t => t.type==='income').reduce((s,t)=>s+t.amount, 0);
+    const dayExpense = dayTxs.filter(t => t.type==='expense').reduce((s,t)=>s+t.amount, 0);
+    const totalBal   = transactions.filter(t => t.date.slice(0,10) <= sel).reduce((s,t) => t.type==='income' ? s+t.amount : s-t.amount, 0);
+
+    const balEl = document.getElementById('balance');
+    balEl.textContent = formatCurrency(totalBal);
+    balEl.className = 'balance-amount ' + (totalBal >= 0 ? 'positive' : 'negative');
+    document.getElementById('total-income').textContent   = formatCurrency(dayIncome);
+    document.getElementById('total-expenses').textContent = formatCurrency(dayExpense);
+
+    renderHistory();
+    updateCharts();
+}
+
+function filterHistory(filter, event) {
+    currentFilter = filter;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    if (event && event.target) event.target.classList.add('active');
+    renderHistory();
+}
+
+function renderHistory() {
+    const listEl = document.getElementById('history-list');
+    const sel = selectedDate();
+    let filtered = sel === todayStr() ? transactions : transactions.filter(t => t.date.startsWith(sel));
+    if (currentFilter !== 'all') filtered = filtered.filter(t => t.type === currentFilter);
+
+    if (filtered.length === 0) { listEl.innerHTML = '<div class="empty-state">Sin movimientos</div>'; return; }
+    listEl.innerHTML = filtered.map(t => `
+        <div class="history-item ${t.type}" data-id="${t.id}">
+            <div class="history-info">
+                <div class="history-description">${t.description}</div>
+                <div class="history-date">${formatDate(t.date)}</div>
+            </div>
+            <div class="history-amount ${t.type==='income' ? 'positive' : 'negative'}">
+                ${t.type==='income' ? '+' : '−'}${formatCurrency(t.amount)}
+            </div>
+            <button class="btn-delete" onclick="deleteTransaction(${t.id})">🗑</button>
+        </div>`).join('');
+}
+
+// ══════════════════════════════════════════════════════
+//  GRÁFICAS
+// ══════════════════════════════════════════════════════
+const SCALE = {
+    x: { ticks: { color:'rgba(255,255,255,0.55)', font:{size:10} }, grid: { color:'rgba(255,255,255,0.06)' } },
+    y: { ticks: { color:'rgba(255,255,255,0.55)', font:{size:10}, callback: v=>v+'€' }, grid: { color:'rgba(255,255,255,0.06)' } }
+};
+
+function updateCharts() { updateDayChart(); updateDonutChart(); updateHistoryChart(); }
+
+function updateDayChart() {
+    const sel = selectedDate();
+    const dayTxs = transactions.filter(t => t.date.startsWith(sel));
+    const hours = Array.from({length:24},(_,i)=>i);
+    const iH = hours.map(h => dayTxs.filter(t=>t.type==='income'&&new Date(t.date).getHours()===h).reduce((s,t)=>s+t.amount,0));
+    const eH = hours.map(h => dayTxs.filter(t=>t.type==='expense'&&new Date(t.date).getHours()===h).reduce((s,t)=>s+t.amount,0));
+    const active = hours.filter((_,i) => iH[i]>0||eH[i]>0);
+    let labels, inc, exp;
+    if (!active.length) { labels=['Sin datos']; inc=[0]; exp=[0]; }
+    else {
+        const minH=Math.max(0,active[0]-1), maxH=Math.min(23,active[active.length-1]+1);
+        const r=hours.slice(minH,maxH+1);
+        labels=r.map(h=>h+'h'); inc=r.map(h=>iH[h]); exp=r.map(h=>eH[h]);
+    }
+    const data = { labels, datasets:[
+        { label:'Ingresos', data:inc, backgroundColor:'rgba(74,222,128,0.65)', borderColor:'#4ade80', borderWidth:1.5, borderRadius:4 },
+        { label:'Gastos',   data:exp, backgroundColor:'rgba(248,113,113,0.65)', borderColor:'#f87171', borderWidth:1.5, borderRadius:4 }
+    ]};
+    if (dayChart) { dayChart.data=data; dayChart.update(); return; }
+    dayChart = new Chart(document.getElementById('day-chart'), {
+        type:'bar', data,
+        options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ labels:{ color:'rgba(255,255,255,0.65)', boxWidth:10, font:{size:10} } } }, scales:SCALE }
+    });
+}
+
+function updateDonutChart() {
+    const sel = selectedDate();
+    const dayTxs = transactions.filter(t => t.date.startsWith(sel));
+    const inc = dayTxs.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
+    const exp = dayTxs.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+    const data = { labels:['Ingresos','Gastos'], datasets:[{ data:[inc||0.001,exp||0.001], backgroundColor:['rgba(74,222,128,0.7)','rgba(248,113,113,0.7)'], borderColor:['#4ade80','#f87171'], borderWidth:2 }]};
+    if (donutChart) { donutChart.data=data; donutChart.update(); return; }
+    donutChart = new Chart(document.getElementById('donut-chart'), {
+        type:'doughnut', data,
+        options:{ responsive:true, maintainAspectRatio:false, plugins:{
+            legend:{ position:'bottom', labels:{ color:'rgba(255,255,255,0.65)', boxWidth:10, font:{size:10} } },
+            tooltip:{ callbacks:{ label: ctx=>` ${ctx.label}: ${ctx.raw.toFixed(2)} €` } }
+        }}
+    });
+}
+
+function updateHistoryChart() {
+    const today = new Date(); today.setHours(23,59,59,999);
+    let startDate;
+    if (historyRange===0) { startDate = transactions.length ? new Date(Math.min(...transactions.map(t=>new Date(t.date)))) : new Date(today-6*86400000); }
+    else { startDate=new Date(); startDate.setDate(startDate.getDate()-(historyRange-1)); }
+    startDate.setHours(0,0,0,0);
+    const prevBal = transactions.filter(t=>new Date(t.date)<startDate).reduce((s,t)=>t.type==='income'?s+t.amount:s-t.amount,0);
+    const days=[]; const d=new Date(startDate);
+    while(d<=today){ days.push(d.toISOString().split('T')[0]); d.setDate(d.getDate()+1); }
+    let running=prevBal;
+    const balances=days.map(day=>{ running+=transactions.filter(t=>t.date.startsWith(day)).reduce((s,t)=>t.type==='income'?s+t.amount:s-t.amount,0); return running; });
+    const labels=days.map(day=>new Date(day+'T12:00:00').toLocaleDateString('es-ES', days.length>60?{month:'short',day:'numeric'}:{weekday:'short',day:'numeric'}));
+    const sel=selectedDate(); const selIdx=days.indexOf(sel);
+    const ctx=document.getElementById('history-chart').getContext('2d');
+    const grad=ctx.createLinearGradient(0,0,0,200);
+    grad.addColorStop(0,'rgba(102,126,234,0.35)'); grad.addColorStop(1,'rgba(102,126,234,0)');
+    const data={ labels, datasets:[{ label:'Balance', data:balances, borderColor:'#667eea', backgroundColor:grad, borderWidth:2, fill:true, tension:0.35,
+        pointBackgroundColor:balances.map((_,i)=>i===selIdx?'#fff':balances[i]>=0?'#667eea':'#f87171'),
+        pointRadius:balances.map((_,i)=>i===selIdx?5:2), pointHoverRadius:6 }]};
+    if (historyChart) { historyChart.data=data; historyChart.update(); return; }
+    historyChart = new Chart(ctx, {
+        type:'line', data,
+        options:{ responsive:true, maintainAspectRatio:false, plugins:{
+            legend:{ labels:{ color:'rgba(255,255,255,0.65)', boxWidth:10, font:{size:10} } },
+            tooltip:{ callbacks:{ label: ctx=>` Balance: ${ctx.raw.toFixed(2)} €` } }
+        }, scales:{
+            x:{ ticks:{ color:'rgba(255,255,255,0.55)', font:{size:10}, maxTicksLimit:10 }, grid:{ color:'rgba(255,255,255,0.06)' } },
+            y:{ ticks:{ color:'rgba(255,255,255,0.55)', font:{size:10}, callback:v=>v+'€' }, grid:{ color:'rgba(255,255,255,0.06)' } }
+        }}
+    });
+}
+
+function setRange(days, btn) {
+    historyRange=days;
+    document.querySelectorAll('.range-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    updateHistoryChart();
+}
+
+// ══════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════
+datePicker.value = todayStr();
+initConfigBanner();
+
+if (SCRIPT_URL) {
+    loadFromSheets();
+} else {
+    setStatus('offline', 'Sin configurar');
+    transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
+    updateUI();
+}
+</script>
+</body>
+</html>
