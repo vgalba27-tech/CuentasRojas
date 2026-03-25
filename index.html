@@ -510,20 +510,22 @@ let dayChart, donutChart, historyChart;
 let scriptUrl     = localStorage.getItem('gasUrl') || '';
 
 // ══════════════════════════════════════════════════════════════
-//  FETCH  — compatible con GitHub Pages y cualquier hosting HTTPS
-//  (Apps Script devuelve Access-Control-Allow-Origin: * en la
-//   respuesta final; fetch sigue el redirect 302 correctamente,
-//   cosa que los <script> dinámicos no pueden hacer en HTTPS)
+//  POST fetch — la única forma fiable desde GitHub Pages.
+//  doGet en Apps Script hace un 302 redirect que el navegador
+//  bloquea por CORS. doPost NO redirige → CORS OK siempre.
 // ══════════════════════════════════════════════════════════════
 async function jsonp(params) {
-    const qs  = new URLSearchParams(params).toString();
-    const url = scriptUrl + '?' + qs;
 
     const controller = new AbortController();
     const timeout    = setTimeout(() => controller.abort(), 12000);
 
     try {
-        const res = await fetch(url, { redirect: 'follow', signal: controller.signal });
+        const res = await fetch(scriptUrl, {
+            method:  'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body:    JSON.stringify(params),
+            signal:  controller.signal
+        });
         clearTimeout(timeout);
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
