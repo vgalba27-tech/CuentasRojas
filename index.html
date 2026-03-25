@@ -255,6 +255,110 @@
             border: none; border-radius: 20px; cursor: pointer; transition: all 0.2s;
         }
         .range-btn.active { background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; }
+
+        /* ── CATEGORÍAS ── */
+        .cat-select {
+            width: 100%; padding: 7px 10px; margin-top: 6px;
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;
+            background: rgba(255,255,255,0.08); color: #fff;
+            font-size: 0.82rem; cursor: pointer; appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='rgba(255,255,255,0.4)'/%3E%3C/svg%3E");
+            background-repeat: no-repeat; background-position: right 10px center;
+            padding-right: 28px;
+        }
+        .cat-select option { background: #1e2340; }
+        .cat-select:focus   { outline: 1px solid #667eea; background-color: rgba(255,255,255,0.12); }
+        .cat-select:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        .cat-badge {
+            display: inline-block; padding: 1px 7px;
+            background: rgba(102,126,234,0.22); color: #a5b4fc;
+            border: 1px solid rgba(102,126,234,0.35);
+            border-radius: 20px; font-size: 0.63rem; font-weight: 600;
+            margin-top: 3px; white-space: nowrap; overflow: hidden;
+            text-overflow: ellipsis; max-width: 140px; vertical-align: middle;
+        }
+
+        /* ── DRAWER CATEGORÍAS ── */
+        .cat-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+            z-index: 149; display: none;
+        }
+        .cat-overlay.show { display: block; }
+
+        .cat-drawer {
+            position: fixed; top: 0; right: 0; height: 100vh; width: 300px;
+            background: #181b30; border-left: 1px solid rgba(255,255,255,0.1);
+            z-index: 150; transform: translateX(100%);
+            transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+            display: flex; flex-direction: column;
+            box-shadow: -8px 0 32px rgba(0,0,0,0.5);
+        }
+        .cat-drawer.open { transform: translateX(0); }
+
+        .cat-drawer-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 18px 20px 14px; border-bottom: 1px solid rgba(255,255,255,0.08);
+            flex-shrink: 0;
+        }
+        .cat-drawer-title { font-size: 0.95rem; font-weight: 700; }
+        .cat-drawer-close {
+            background: rgba(255,255,255,0.08); border: none; color: rgba(255,255,255,0.7);
+            width: 26px; height: 26px; border-radius: 50%; cursor: pointer;
+            font-size: 0.85rem; display: flex; align-items: center; justify-content: center;
+            transition: background 0.2s;
+        }
+        .cat-drawer-close:hover { background: rgba(255,255,255,0.18); color: #fff; }
+
+        .cat-info {
+            padding: 10px 20px; font-size: 0.75rem; opacity: 0.5; flex-shrink: 0;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .cat-list { flex: 1; overflow-y: auto; padding: 10px 16px; }
+        .cat-list::-webkit-scrollbar { width: 4px; }
+        .cat-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 2px; }
+
+        .cat-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 9px 12px; background: rgba(255,255,255,0.05);
+            border-radius: 8px; margin-bottom: 5px;
+            border-left: 3px solid #667eea; font-size: 0.85rem;
+            transition: background 0.2s;
+        }
+        .cat-item:hover { background: rgba(255,255,255,0.09); }
+        .cat-item-name { flex: 1; }
+        .cat-item-del {
+            background: rgba(239,68,68,0.15); color: #f87171;
+            padding: 3px 7px; font-size: 0.7rem; border: none;
+            border-radius: 6px; cursor: pointer; transition: background 0.2s;
+        }
+        .cat-item-del:hover { background: rgba(239,68,68,0.3); }
+
+        .cat-add-row {
+            padding: 14px 16px; border-top: 1px solid rgba(255,255,255,0.08);
+            display: flex; gap: 8px; flex-shrink: 0;
+        }
+        .cat-add-btn {
+            padding: 8px 12px; border: none; border-radius: 8px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: #fff; font-size: 0.8rem; font-weight: 600;
+            cursor: pointer; white-space: nowrap; transition: opacity 0.2s; flex-shrink: 0;
+        }
+        .cat-add-btn:hover { opacity: 0.85; }
+
+        /* ── HEADER PANEL DERECHO ── */
+        .panel-right-header {
+            display: flex; align-items: center; justify-content: space-between;
+            flex-shrink: 0;
+        }
+        .btn-categories {
+            padding: 4px 12px; border: 1px solid rgba(255,255,255,0.12); border-radius: 20px;
+            cursor: pointer; font-size: 0.72rem; font-weight: 600;
+            background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.7);
+            transition: all 0.2s; display: flex; align-items: center; gap: 5px;
+        }
+        .btn-categories:hover { background: rgba(102,126,234,0.25); border-color: #667eea; color: #fff; }
     </style>
 </head>
 <body>
@@ -284,6 +388,25 @@
             <button class="btn-primary" onclick="saveScriptUrl()">💾 Guardar y conectar</button>
             <button class="btn-secondary" onclick="closeModal()">Usar sin Sheets</button>
         </div>
+    </div>
+</div>
+
+<!-- OVERLAY DRAWER -->
+<div class="cat-overlay" id="cat-overlay" onclick="closeCatPanel()"></div>
+
+<!-- DRAWER CATEGORÍAS -->
+<div class="cat-drawer" id="cat-drawer">
+    <div class="cat-drawer-header">
+        <span class="cat-drawer-title">🏷️ Categorías de gastos</span>
+        <button class="cat-drawer-close" onclick="closeCatPanel()">✕</button>
+    </div>
+    <div class="cat-info">Sincronizadas con la pestaña <b>Categorias</b> del Sheet</div>
+    <div class="cat-list" id="cat-list">
+        <div class="empty-state">Cargando…</div>
+    </div>
+    <div class="cat-add-row">
+        <input type="text" id="cat-input" placeholder="Nueva categoría…" onkeydown="if(event.key==='Enter')addCategoryItem()">
+        <button class="cat-add-btn" onclick="addCategoryItem()">+ Añadir</button>
     </div>
 </div>
 
@@ -322,6 +445,9 @@
                 <input type="text" id="description" placeholder="Descripción...">
                 <input type="number" id="amount" placeholder="€" step="0.01" min="0" style="width:90px;flex-shrink:0;">
             </div>
+            <select id="category" class="cat-select">
+                <option value="">📦 Sin categoría</option>
+            </select>
             <div class="form-buttons">
                 <button class="btn-income" id="btn-income" onclick="addTransaction('income')">+ Ingreso</button>
                 <button class="btn-expense" id="btn-expense" onclick="addTransaction('expense')">− Gasto</button>
@@ -344,7 +470,10 @@
     </div>
 
     <div class="panel-right">
-        <div class="panel-right-title">Gráficas</div>
+        <div class="panel-right-header">
+            <div class="panel-right-title">Gráficas</div>
+            <button class="btn-categories" onclick="openCatPanel()">🏷️ Categorías</button>
+        </div>
         <div class="charts-top">
             <div class="chart-box">
                 <h3>📊 Movimientos del día</h3>
@@ -374,6 +503,7 @@
 //  ESTADO
 // ══════════════════════════════════════════════════════════════
 let transactions  = [];
+let categories    = [];
 let currentFilter = 'all';
 let historyRange  = 7;
 let dayChart, donutChart, historyChart;
@@ -493,6 +623,81 @@ async function syncDelete(id) {
 }
 
 // ══════════════════════════════════════════════════════════════
+//  CATEGORÍAS
+// ══════════════════════════════════════════════════════════════
+const DEFAULT_CATEGORIES = ['Gasolina','Ropa','Cafeterías','Restaurantes','Ocio','Caprichos','Supermercados'];
+
+async function loadCategories() {
+    if (scriptUrl) {
+        try {
+            const data = await jsonp({ action: 'getCategories' });
+            categories = data.categories && data.categories.length ? data.categories : DEFAULT_CATEGORIES;
+        } catch(e) {
+            categories = JSON.parse(localStorage.getItem('categories')) || DEFAULT_CATEGORIES;
+        }
+    } else {
+        categories = JSON.parse(localStorage.getItem('categories')) || DEFAULT_CATEGORIES;
+    }
+    localStorage.setItem('categories', JSON.stringify(categories));
+    renderCatSelect();
+    renderCatPanel();
+}
+
+function renderCatSelect() {
+    const sel = document.getElementById('category');
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">📦 Sin categoría</option>' +
+        categories.map(c => `<option value="${c}"${c===cur?' selected':''}>${c}</option>`).join('');
+}
+
+function renderCatPanel() {
+    const el = document.getElementById('cat-list');
+    if (!categories.length) { el.innerHTML = '<div class="empty-state">Sin categorías</div>'; return; }
+    el.innerHTML = categories.map(c => `
+        <div class="cat-item">
+            <span class="cat-item-name">${c}</span>
+            <button class="cat-item-del" onclick="removeCategoryItem('${c.replace(/'/g,"\\'")}')">🗑</button>
+        </div>`).join('');
+}
+
+function openCatPanel()  {
+    document.getElementById('cat-drawer').classList.add('open');
+    document.getElementById('cat-overlay').classList.add('show');
+}
+function closeCatPanel() {
+    document.getElementById('cat-drawer').classList.remove('open');
+    document.getElementById('cat-overlay').classList.remove('show');
+}
+
+async function addCategoryItem() {
+    const input = document.getElementById('cat-input');
+    const name  = input.value.trim();
+    if (!name) return;
+    if (categories.map(c=>c.toLowerCase()).includes(name.toLowerCase())) {
+        showBanner('error', '✗ Esa categoría ya existe'); return;
+    }
+    categories.push(name);
+    localStorage.setItem('categories', JSON.stringify(categories));
+    renderCatSelect(); renderCatPanel();
+    input.value = '';
+    if (scriptUrl) {
+        try { await jsonp({ action: 'addCategory', name }); }
+        catch(e) { showBanner('error', '✗ Error al guardar categoría: ' + e.message); }
+    }
+}
+
+async function removeCategoryItem(name) {
+    if (!confirm(`¿Eliminar la categoría "${name}"?`)) return;
+    categories = categories.filter(c => c !== name);
+    localStorage.setItem('categories', JSON.stringify(categories));
+    renderCatSelect(); renderCatPanel();
+    if (scriptUrl) {
+        try { await jsonp({ action: 'deleteCategory', name }); }
+        catch(e) { showBanner('error', '✗ Error al eliminar categoría: ' + e.message); }
+    }
+}
+
+// ══════════════════════════════════════════════════════════════
 //  FECHA
 // ══════════════════════════════════════════════════════════════
 const datePicker = document.getElementById('date-picker');
@@ -509,13 +714,15 @@ function saveLocal() { localStorage.setItem('transactions', JSON.stringify(trans
 async function addTransaction(type) {
     const descEl   = document.getElementById('description');
     const amountEl = document.getElementById('amount');
+    const catEl    = document.getElementById('category');
     const desc     = descEl.value.trim();
     const amount   = parseFloat(amountEl.value);
     if (!desc || isNaN(amount) || amount <= 0) { alert('Introduce descripción y cantidad válida'); return; }
 
+    const category = type === 'expense' ? (catEl.value || '') : '';
     const now = new Date();
     const iso = `${selectedDate()}T${now.toTimeString().slice(0,8)}`;
-    const t   = { id: String(Date.now()), description: desc, amount, type, date: new Date(iso).toISOString() };
+    const t   = { id: String(Date.now()), description: desc, amount, type, date: new Date(iso).toISOString(), category };
 
     // Optimistic UI
     transactions.unshift(t);
@@ -575,7 +782,7 @@ function renderHistory() {
         <div class="history-item ${t.type}">
             <div class="history-info">
                 <div class="history-description">${t.description}</div>
-                <div class="history-date">${fmtDate(t.date)}</div>
+                <div class="history-date">${fmtDate(t.date)}${t.category ? ` · <span class="cat-badge">${t.category}</span>` : ''}</div>
             </div>
             <div class="history-amount ${t.type==='income'?'positive':'negative'}">
                 ${t.type==='income'?'+':'−'}${fmt(t.amount)}
@@ -695,9 +902,11 @@ datePicker.value = todayStr();
 
 if (scriptUrl) {
     loadFromSheets();
+    loadCategories();
 } else {
     transactions = JSON.parse(localStorage.getItem('transactions')) || [];
     updateUI();
+    loadCategories();
     openModal();
 }
 </script>
